@@ -112,6 +112,31 @@ const esc = (value) => String(value == null ? '' : value)
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
+// Плавно «досчитывает» число, чтобы суммы не прыгали.
+const shownValues = new WeakMap();
+
+function animateValue(element, value, format) {
+  if (!element) return;
+  const from = shownValues.has(element) ? shownValues.get(element) : 0;
+  shownValues.set(element, value);
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || from === value || Math.abs(value - from) < 1) {
+    element.textContent = format(value);
+    return;
+  }
+
+  const start = performance.now();
+  const duration = 520;
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    element.textContent = format(from + (value - from) * eased);
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 // ---------- сообщения ----------
 
 function toast(text, ms = 3200) {
@@ -179,7 +204,7 @@ function renderSummary() {
   const income = incomeOf(entries);
   const budget = Number(state.settings.budget) || 0;
 
-  els.monthSpent.textContent = formatMoney(spent);
+  animateValue(els.monthSpent, spent, formatMoney);
   els.monthIncome.textContent = income ? `+${formatMoney(income)}` : '0 ₽';
 
   if (!budget) {
@@ -260,8 +285,8 @@ function renderMonth() {
   if (budget) {
     const left = budget - spent;
     const days = daysLeftInMonth();
-    els.budgetLeft.textContent = formatMoney(left);
-    els.budgetDay.textContent = left > 0 ? formatMoney(Math.round(left / days)) : '0 ₽';
+    animateValue(els.budgetLeft, left, formatMoney);
+    animateValue(els.budgetDay, left > 0 ? Math.round(left / days) : 0, formatMoney);
   } else {
     els.budgetLeft.textContent = '—';
     els.budgetDay.textContent = '—';
@@ -291,8 +316,14 @@ function renderMonth() {
         <span class="cat-ico">${icon(row.id || 'other', 18)}</span>
         <span class="cat-name">${esc(row.name)}</span>
         <span class="cat-sum">${formatMoney(row.amount)}</span>
-        <span class="cat-track"><span class="cat-fill" style="width:${((row.amount / max) * 100).toFixed(1)}%"></span></span>
+        <span class="cat-track"><span class="cat-fill" data-width="${((row.amount / max) * 100).toFixed(1)}"></span></span>
       </li>`).join('');
+
+    requestAnimationFrame(() => {
+      els.catList.querySelectorAll('.cat-fill').forEach((bar) => {
+        bar.style.width = `${bar.dataset.width}%`;
+      });
+    });
   }
 
   // записи по дням
@@ -559,7 +590,7 @@ function ensureRecognition() {
 
   recognition = new Ctor();
   recognition.lang = 'ru-RU';
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
 
@@ -681,6 +712,10 @@ function showMonth(show) {
   els.subtitle.textContent = show ? 'итоги месяца' : `сегодня, ${dayMonth(Date.now())}`;
   els.monthLinkText.textContent = monthName();
   els.monthTitle.textContent = monthName();
+  const view = show ? els.views.month : els.views.day;
+  view.classList.remove('view-in');
+  void view.offsetWidth;
+  view.classList.add('view-in');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -705,21 +740,16 @@ els.examples.addEventListener('click', (event) => {
 });
 
 function bindMic(element) {
-  element.addEventListener('pointerdown', (event) => {
-    event.preventDefault();
-    startListening();
+  element.addEventListener('click', () => {
+    if (listening) stopListening();
+    else startListening();
   });
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
-    element.addEventListener(type, () => stopListening());
-  }
   element.addEventListener('keydown', (event) => {
     if (event.code === 'Space' || event.code === 'Enter') {
       event.preventDefault();
-      if (!listening) startListening();
+      if (listening) stopListening();
+      else startListening();
     }
-  });
-  element.addEventListener('keyup', (event) => {
-    if (event.code === 'Space' || event.code === 'Enter') stopListening();
   });
 }
 
@@ -794,9 +824,13 @@ function bindListActions(container) {
     if (del) {
       event.stopPropagation();
       const entry = state.entries.find((item) => item.id === del.dataset.del);
-      store.removeEntry(state, del.dataset.del);
-      render();
-      toast(entry ? `Удалил: ${entry.note || entry.categoryName}` : 'Удалил');
+      const rowEl = del.closest('.entry');
+      if (rowEl) rowEl.classList.add('is-removing');
+      setTimeout(() => {
+        store.removeEntry(state, del.dataset.del);
+        render();
+        toast(entry ? `Удалил: ${entry.note || entry.categoryName}` : 'Удалил');
+      }, 150);
       return;
     }
     const row = event.target.closest('[data-id]');
