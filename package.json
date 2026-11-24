@@ -1,0 +1,6 @@
+{
+  "name": "rashody",
+  "private": true,
+  "type": "module",
+  "description": "Расходы голосом — PWA без сервера. Тесты разбора фраз: node tests/parser.test.mjs"
+}
