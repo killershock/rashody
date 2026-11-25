@@ -489,6 +489,15 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 .switch input:checked { background: var(--accent); border-color: var(--accent); }
 .switch input:checked::after { transform: translateX(16px); background: var(--accent-ink); }
 
+.version {
+  margin: 16px 0 0;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+
 /* ---------- ввод ---------- */
 
 .composer {
@@ -538,7 +547,7 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   place-items: center;
   box-shadow: 0 10px 22px rgba(180, 71, 46, 0.26);
   transition: transform 0.14s ease, box-shadow 0.2s ease;
-  touch-action: none;
+  touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
 }
