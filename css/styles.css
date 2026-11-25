@@ -966,6 +966,67 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   color: var(--muted);
 }
 
+/* ---------- своя категория ---------- */
+
+.chip-add {
+  margin-top: 8px;
+  border-style: dashed;
+  color: var(--accent);
+}
+
+.new-cat-form {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.new-cat-form input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  padding: 8px 2px;
+  font-size: 14px;
+  outline: none;
+}
+
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.icon-pick {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-soft);
+}
+
+.icon-pick.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(180, 71, 46, 0.08);
+}
+
+.new-cat-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.new-cat-actions .ghost-btn,
+.new-cat-actions .primary-btn {
+  flex: 0 0 auto;
+  padding: 9px 14px;
+}
+
 /* ---------- сообщение ---------- */
 
 /* ---------- карточка добавления ---------- */

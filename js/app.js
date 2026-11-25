@@ -68,6 +68,12 @@ const els = {
   sheetRaw: $('#sheet-raw'),
   sheetSave: $('#sheet-save'),
   sheetDelete: $('#sheet-delete'),
+  newCatToggle: $('#new-cat-toggle'),
+  newCatForm: $('#new-cat-form'),
+  newCatName: $('#new-cat-name'),
+  iconPicker: $('#icon-picker'),
+  newCatCancel: $('#new-cat-cancel'),
+  newCatSave: $('#new-cat-save'),
   kinds: Array.from(document.querySelectorAll('.kind')),
   flash: $('#flash'),
   flashIco: $('#flash-ico'),
@@ -82,6 +88,23 @@ const EXAMPLES = [
   'продукты тысяча двести',
   'зарплата сорок тысяч',
 ];
+
+const customCategories = () => (
+  Array.isArray(state.settings.customCategories) ? state.settings.customCategories : []
+);
+
+const allCategories = () => [
+  ...CATEGORIES.slice(0, -1),
+  ...customCategories(),
+  CATEGORIES[CATEGORIES.length - 1],
+];
+
+const ICON_CHOICES = [
+  'food', 'cafe', 'transport', 'car', 'home', 'health', 'clothes',
+  'fun', 'comm', 'gifts', 'beauty', 'debt', 'other',
+];
+
+let newCatIcon = 'other';
 
 let toastTimer = null;
 let lastAddedId = null;
@@ -293,7 +316,7 @@ function entryRow(entry, showDate = false) {
     : `${entry.categoryName} · ${timeOf(entry.ts)}`;
   return `
     <li class="entry${entry.id === lastAddedId ? ' is-new' : ''}" data-id="${esc(entry.id)}">
-      <div class="entry-ico" aria-hidden="true">${icon(entry.categoryId || 'other', 19)}</div>
+      <div class="entry-ico" aria-hidden="true">${icon(entry.iconId || entry.categoryId || 'other', 19)}</div>
       <div class="entry-main">
         <div class="entry-note">${esc(entry.note || entry.categoryName)}</div>
         <div class="entry-meta">${esc(meta)}</div>
@@ -386,7 +409,8 @@ function renderMonth() {
   for (const entry of entries) {
     if (entry.kind === 'income') continue;
     const current = byCategory.get(entry.categoryId) || {
-      id: entry.categoryId, name: entry.categoryName, amount: 0, count: 0,
+      id: entry.categoryId, name: entry.categoryName,
+      iconId: entry.iconId || entry.categoryId, amount: 0, count: 0,
     };
     current.amount += Number(entry.amount) || 0;
     current.count += 1;
@@ -400,7 +424,7 @@ function renderMonth() {
     const max = rows[0].amount || 1;
     els.catList.innerHTML = rows.map((row) => `
       <li class="cat-row">
-        <span class="cat-ico">${icon(row.id || 'other', 18)}</span>
+        <span class="cat-ico">${icon(row.iconId || row.id || 'other', 18)}</span>
         <span class="cat-name">${esc(row.name)}</span>
         <span class="cat-sum">${formatMoney(row.amount)}</span>
         <span class="cat-track"><span class="cat-fill" data-width="${((row.amount / max) * 100).toFixed(1)}"></span></span>
@@ -462,7 +486,7 @@ function handleText(raw) {
     return;
   }
 
-  const parsed = parsePhrase(text);
+  const parsed = parsePhrase(text, customCategories());
   if (!parsed.amount) {
     openSheet({ parsed });
     toast('Сумму не разобрал — впиши её руками');
@@ -583,6 +607,7 @@ function openSheet({ parsed, entry }) {
     };
   }
   renderSheet();
+  resetNewCatForm();
   els.backdrop.classList.remove('is-hidden');
   els.sheet.classList.remove('is-hidden');
   setTimeout(() => {
@@ -609,14 +634,48 @@ function renderSheet() {
     kindBtn.classList.toggle('is-active', kindBtn.dataset.kind === sheet.kind);
   }
 
-  const list = sheet.kind === 'income' ? [INCOME] : CATEGORIES;
+  const list = sheet.kind === 'income' ? [INCOME] : allCategories();
   if (sheet.kind === 'income') sheet.categoryId = 'income';
 
   els.sheetChips.innerHTML = list.map((category) => `
     <button class="chip${category.id === sheet.categoryId ? ' is-active' : ''}" type="button"
       data-category="${esc(category.id)}">
-      ${icon(category.id, 16)}<span>${esc(category.name)}</span>
+      ${icon(category.icon || category.id, 16)}<span>${esc(category.name)}</span>
     </button>`).join('');
+}
+
+function renderIconPicker() {
+  els.iconPicker.innerHTML = ICON_CHOICES.map((name) => `
+    <button class="icon-pick${name === newCatIcon ? ' is-active' : ''}" type="button"
+      data-icon="${name}" aria-label="${name}">
+      ${icon(name, 18)}
+    </button>`).join('');
+}
+
+function resetNewCatForm() {
+  els.newCatForm.classList.add('is-hidden');
+  els.newCatName.value = '';
+  newCatIcon = 'other';
+  renderIconPicker();
+}
+
+function addCustomCategory() {
+  const name = els.newCatName.value.trim();
+  if (name.length < 2) {
+    toast('Название слишком короткое');
+    els.newCatName.focus();
+    return;
+  }
+  const pretty = name.charAt(0).toUpperCase() + name.slice(1);
+  const category = { id: `custom-${Date.now()}`, name: pretty, icon: newCatIcon };
+  store.setSetting(state, 'customCategories', [...customCategories(), category]);
+  if (sheet) {
+    sheet.categoryId = category.id;
+    if (!sheet.note) sheet.note = pretty;
+    renderSheet();
+  }
+  resetNewCatForm();
+  toast(`Категория «${pretty}» добавлена`);
 }
 
 function saveSheet() {
@@ -631,7 +690,7 @@ function saveSheet() {
   const kind = sheet.kind;
   const category = kind === 'income'
     ? INCOME
-    : (CATEGORIES.find((item) => item.id === sheet.categoryId) || CATEGORIES[CATEGORIES.length - 1]);
+    : (allCategories().find((item) => item.id === sheet.categoryId) || CATEGORIES[CATEGORIES.length - 1]);
 
   const note = els.sheetNote.value.trim() || (category.id === 'other' ? '' : category.name);
 
@@ -994,6 +1053,31 @@ els.sheetChips.addEventListener('click', (event) => {
   if (!chip || !sheet) return;
   sheet.categoryId = chip.dataset.category;
   renderSheet();
+});
+
+els.newCatToggle.addEventListener('click', () => {
+  const willShow = els.newCatForm.classList.contains('is-hidden');
+  els.newCatForm.classList.toggle('is-hidden', !willShow);
+  if (willShow) {
+    renderIconPicker();
+    els.newCatName.focus();
+  }
+});
+
+els.iconPicker.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-icon]');
+  if (!button) return;
+  newCatIcon = button.dataset.icon;
+  renderIconPicker();
+});
+
+els.newCatCancel.addEventListener('click', resetNewCatForm);
+els.newCatSave.addEventListener('click', addCustomCategory);
+els.newCatName.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    addCustomCategory();
+  }
 });
 
 els.kinds.forEach((kindBtn) => {

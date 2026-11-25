@@ -60,6 +60,11 @@ check('вопрос: месяц', parseQuery('сколько всего в эт�
 
 check('деньги формат', formatMoney(18300).replace(/\u00a0/g, ' '), '18 300 ₽');
 
+const custom = [{ id: 'custom-1', name: 'Спорт', icon: 'fun' }];
+check('своя категория', parsePhrase('спорт 2000', custom).category.id, 'custom-1');
+check('своя категория: заметка', parsePhrase('спорт 2000', custom).note, 'Спорт');
+check('без своих категорий — другое', parsePhrase('спорт 2000').category.id, 'other');
+
 console.log(`\nПроверок пройдено: ${passed}`);
 if (failures.length) {
   console.log(`Провалено: ${failures.length}\n`);

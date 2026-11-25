@@ -46,6 +46,7 @@ export function makeEntry(parsed) {
     kind: parsed.kind === 'income' ? 'income' : 'expense',
     categoryId: parsed.category ? parsed.category.id : 'other',
     categoryName: parsed.category ? parsed.category.name : 'Другое',
+    iconId: parsed.category ? (parsed.category.icon || parsed.category.id) : 'other',
     emoji: parsed.category ? parsed.category.emoji : '📦',
     note: parsed.note || '',
     source: parsed.source || 'voice',

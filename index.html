@@ -125,7 +125,7 @@
             <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.8 6.6h14.4M9.6 6.6V4.8h4.8v1.8"/><path d="M6.8 6.6l.9 12.2a1.6 1.6 0 0 0 1.6 1.5h5.4a1.6 1.6 0 0 0 1.6-1.5l.9-12.2"/><path d="M10.4 10.6v6M13.6 10.6v6"/></svg>
             Удалить все записи
           </button>
-          <p class="version">версия 1.4 · несколько дней, календарь, анимация входа</p>
+          <p class="version">версия 1.5 · свои категории</p>
         </section>
       </section>
     </main>
@@ -195,6 +195,15 @@
     <div class="field">
       <span class="field-label">категория</span>
       <div class="chips" id="sheet-chips"></div>
+      <button class="chip chip-add" id="new-cat-toggle" type="button">+ своя категория</button>
+      <div class="new-cat-form is-hidden" id="new-cat-form">
+        <input id="new-cat-name" type="text" maxlength="24" placeholder="например: спорт" autocomplete="off" />
+        <div class="icon-picker" id="icon-picker"></div>
+        <div class="new-cat-actions">
+          <button class="ghost-btn" id="new-cat-cancel" type="button">Отмена</button>
+          <button class="primary-btn" id="new-cat-save" type="button">Добавить</button>
+        </div>
+      </div>
     </div>
 
     <p class="sheet-raw" id="sheet-raw"></p>

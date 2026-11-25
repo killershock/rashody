@@ -233,13 +233,24 @@ function pickAmount(groups, tokens) {
 
 // ---------- категории ----------
 
-function matchCategory(text) {
+function keywordsFor(category) {
+  if (Array.isArray(category.keywords) && category.keywords.length) {
+    return category.keywords;
+  }
+  return String(category.name || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .split(/[^a-zа-я0-9]+/)
+    .filter((word) => word.length >= 3);
+}
+
+function matchCategory(text, categories = CATEGORIES) {
   let best = null;
   let bestScore = 0;
 
-  for (const category of CATEGORIES) {
+  for (const category of categories) {
     let score = 0;
-    for (const keyword of category.keywords) {
+    for (const keyword of keywordsFor(category)) {
       if (text.includes(keyword)) score += keyword.length;
     }
     if (score > bestScore) {
@@ -262,10 +273,14 @@ function isIncome(text) {
  * @returns {{amount:number|null, kind:'expense'|'income', category:object|null,
  *            note:string, raw:string, confidence:'high'|'low', needsCategory:boolean}}
  */
-export function parsePhrase(raw) {
+export function parsePhrase(raw, extraCategories = []) {
   const text = normalize(raw);
   const tokens = tokenize(text);
   const groups = scanNumberGroups(tokens);
+
+  const categories = extraCategories.length
+    ? [...CATEGORIES.slice(0, -1), ...extraCategories, CATEGORIES[CATEGORIES.length - 1]]
+    : CATEGORIES;
 
   const amountGroup = pickAmount(groups, tokens);
   const amount = amountGroup ? Math.round(amountGroup.value) : null;
@@ -275,7 +290,7 @@ export function parsePhrase(raw) {
   if (income) {
     category = INCOME;
   } else {
-    category = matchCategory(text) || CATEGORIES[CATEGORIES.length - 1];
+    category = matchCategory(text, categories) || CATEGORIES[CATEGORIES.length - 1];
   }
 
   // заметка = слова, не занятые числом и служебными словами
