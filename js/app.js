@@ -13,6 +13,17 @@ const els = {
   monthLinkText: $('#month-link-text'),
   backBtn: $('#btn-back'),
   monthTitle: $('#month-title'),
+  prevDay: $('#prev-day'),
+  nextDay: $('#next-day'),
+  dateLabel: $('#date-label'),
+  calBackdrop: $('#cal-backdrop'),
+  calendarSheet: $('#calendar-sheet'),
+  calTitle: $('#cal-title'),
+  calClose: $('#cal-close'),
+  calPrev: $('#cal-prev'),
+  calNext: $('#cal-next'),
+  calToday: $('#cal-today'),
+  calGrid: $('#cal-grid'),
   views: { day: $('#view-day'), month: $('#view-month') },
   monthSpent: $('#month-spent'),
   monthIncome: $('#month-income'),
@@ -66,15 +77,18 @@ const EXAMPLES = [
 let toastTimer = null;
 let lastAddedId = null;
 let currentView = 'day';
+let viewTs = startOfDay(Date.now());
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
 let installEvent = null;
 
 // ---------- даты и суммы ----------
 
-const startOfDay = (ts) => {
+function startOfDay(ts) {
   const date = new Date(ts);
   date.setHours(0, 0, 0, 0);
   return date.getTime();
-};
+}
 
 const startOfMonth = () => {
   const date = new Date();
@@ -97,6 +111,7 @@ const todayEntries = () => {
   const from = startOfDay(Date.now());
   return state.entries.filter((entry) => entry.ts >= from);
 };
+const viewEntries = () => state.entries.filter((entry) => startOfDay(entry.ts) === viewTs);
 
 const spentOf = (entries) => sumAmount(entries.filter((entry) => entry.kind !== 'income'));
 const incomeOf = (entries) => sumAmount(entries.filter((entry) => entry.kind === 'income'));
@@ -104,6 +119,13 @@ const incomeOf = (entries) => sumAmount(entries.filter((entry) => entry.kind ===
 const monthName = () => new Date().toLocaleDateString('ru-RU', { month: 'long' });
 const weekday = (ts) => new Date(ts).toLocaleDateString('ru-RU', { weekday: 'long' });
 const dayMonth = (ts) => new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+
+function dayLabel(ts) {
+  const today = startOfDay(Date.now());
+  if (ts === today) return 'сегодня';
+  if (ts === today - 86400000) return 'вчера';
+  return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
+}
 const timeOf = (ts) => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
 const esc = (value) => String(value == null ? '' : value)
@@ -193,9 +215,7 @@ function render() {
   renderTheme();
   els.monthLinkText.textContent = monthName();
   els.monthTitle.textContent = monthName();
-  els.subtitle.textContent = currentView === 'day'
-    ? `сегодня, ${dayMonth(Date.now())}`
-    : 'итоги месяца';
+  els.subtitle.textContent = currentView === 'day' ? 'дневник' : 'итоги месяца';
 }
 
 function renderSummary() {
@@ -248,22 +268,37 @@ function entryRow(entry) {
 }
 
 function renderToday() {
-  const entries = todayEntries();
+  const entries = viewEntries();
   const spent = spentOf(entries);
   const income = incomeOf(entries);
+  const today = startOfDay(Date.now());
+  const isToday = viewTs === today;
 
   const parts = [];
   if (spent) parts.push(`−${formatMoney(spent)}`);
   if (income) parts.push(`+${formatMoney(income)}`);
-  els.todayLabel.textContent = parts.length ? `сегодня · ${parts.join(' · ')}` : 'сегодня';
+  els.todayLabel.textContent = parts.length ? parts.join(' · ') : 'нет записей';
 
   const count = entries.length;
   els.todayCount.textContent = count
     ? `${count} ${plural(count, 'запись', 'записи', 'записей')}`
     : 'пусто';
 
+  els.dateLabel.textContent = dayLabel(viewTs);
+  els.dateLabel.classList.toggle('is-today', isToday);
+  els.nextDay.disabled = viewTs >= today;
+
   els.todayList.innerHTML = entries.map(entryRow).join('');
   els.emptyState.classList.toggle('is-hidden', entries.length > 0);
+
+  const emptyTitle = els.emptyState.querySelector('.empty-title');
+  const emptyText = els.emptyState.querySelector('.empty-text');
+  if (emptyTitle) emptyTitle.textContent = isToday ? 'Скажи, сколько потратил' : 'В этот день пусто';
+  if (emptyText) {
+    emptyText.textContent = isToday
+      ? 'Нажми микрофон и говори: «кофе двести пятьдесят». Или набери в строке.'
+      : 'Выбери другой день стрелками или загляни в календарь.';
+  }
 
   if (!els.examples.dataset.ready) {
     els.examples.innerHTML = EXAMPLES
@@ -344,7 +379,7 @@ function renderMonth() {
       const title = new Date(key).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
       return `
         <section>
-          <div class="day-head"><span>${esc(title)}, ${esc(weekday(key))}</span><b>${formatMoney(daySpent)}</b></div>
+          <div class="day-head" data-day="${key}"><span>${esc(title)}, ${esc(weekday(key))}</span><b>${formatMoney(daySpent)}</b></div>
           <ul class="entries">${list.map(entryRow).join('')}</ul>
         </section>`;
     }).join('');
@@ -392,6 +427,8 @@ function commitParsed(parsed) {
   const entry = store.makeEntry(parsed);
   store.addEntry(state, entry);
   lastAddedId = entry.id;
+  viewTs = startOfDay(Date.now());
+  if (currentView !== 'day') showMonth(false);
   render();
   toast(`${entry.note || entry.categoryName} · ${formatMoney(entry.amount)} → ${entry.categoryName}`);
 }
@@ -709,7 +746,7 @@ function showMonth(show) {
   currentView = show ? 'month' : 'day';
   els.views.day.classList.toggle('is-hidden', show);
   els.views.month.classList.toggle('is-hidden', !show);
-  els.subtitle.textContent = show ? 'итоги месяца' : `сегодня, ${dayMonth(Date.now())}`;
+  els.subtitle.textContent = show ? 'итоги месяца' : 'дневник';
   els.monthLinkText.textContent = monthName();
   els.monthTitle.textContent = monthName();
   const view = show ? els.views.month : els.views.day;
@@ -721,6 +758,83 @@ function showMonth(show) {
 
 els.monthLink.addEventListener('click', () => showMonth(true));
 els.backBtn.addEventListener('click', () => showMonth(false));
+
+function shiftDay(delta) {
+  const today = startOfDay(Date.now());
+  const next = viewTs + delta * 86400000;
+  if (next > today) return;
+  viewTs = startOfDay(next);
+  render();
+}
+
+function openCalendar() {
+  const current = new Date(viewTs);
+  calYear = current.getFullYear();
+  calMonth = current.getMonth();
+  renderCalendar();
+  els.calBackdrop.classList.remove('is-hidden');
+  els.calendarSheet.classList.remove('is-hidden');
+}
+
+function closeCalendar() {
+  els.calBackdrop.classList.add('is-hidden');
+  els.calendarSheet.classList.add('is-hidden');
+}
+
+function renderCalendar() {
+  const first = new Date(calYear, calMonth, 1);
+  const offset = (first.getDay() + 6) % 7;
+  const days = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = startOfDay(Date.now());
+  const now = new Date();
+
+  els.calTitle.textContent = first.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+
+  const cells = [];
+  for (let i = 0; i < offset; i += 1) cells.push('<span class="cal-day cal-empty"></span>');
+  for (let day = 1; day <= days; day += 1) {
+    const ts = new Date(calYear, calMonth, day).getTime();
+    const classes = ['cal-day'];
+    if (ts === today) classes.push('is-today');
+    if (ts === viewTs) classes.push('is-selected');
+    const disabled = ts > today ? ' disabled' : '';
+    cells.push(`<button class="${classes.join(' ')}" type="button" data-day="${ts}"${disabled}>${day}</button>`);
+  }
+  els.calGrid.innerHTML = cells.join('');
+  els.calNext.disabled = calYear > now.getFullYear()
+    || (calYear === now.getFullYear() && calMonth >= now.getMonth());
+}
+
+els.prevDay.addEventListener('click', () => shiftDay(-1));
+els.nextDay.addEventListener('click', () => shiftDay(1));
+els.dateLabel.addEventListener('click', openCalendar);
+els.calClose.addEventListener('click', closeCalendar);
+els.calBackdrop.addEventListener('click', closeCalendar);
+els.calPrev.addEventListener('click', () => {
+  calMonth -= 1;
+  if (calMonth < 0) { calMonth = 11; calYear -= 1; }
+  renderCalendar();
+});
+els.calNext.addEventListener('click', () => {
+  if (els.calNext.disabled) return;
+  calMonth += 1;
+  if (calMonth > 11) { calMonth = 0; calYear += 1; }
+  renderCalendar();
+});
+els.calToday.addEventListener('click', () => {
+  viewTs = startOfDay(Date.now());
+  closeCalendar();
+  if (currentView !== 'day') showMonth(false);
+  render();
+});
+els.calGrid.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-day]');
+  if (!button) return;
+  viewTs = startOfDay(Number(button.dataset.day));
+  closeCalendar();
+  if (currentView !== 'day') showMonth(false);
+  render();
+});
 
 els.textForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -807,6 +921,7 @@ els.backdrop.addEventListener('click', closeSheet);
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     if (!els.sheet.classList.contains('is-hidden')) closeSheet();
+    if (!els.calendarSheet.classList.contains('is-hidden')) closeCalendar();
     if (!els.overlay.classList.contains('is-hidden')) {
       micError = 'aborted';
       stopListening();
@@ -842,6 +957,14 @@ function bindListActions(container) {
 
 bindListActions(els.todayList);
 bindListActions(els.monthDays);
+
+els.monthDays.addEventListener('click', (event) => {
+  const head = event.target.closest('.day-head[data-day]');
+  if (!head) return;
+  viewTs = startOfDay(Number(head.dataset.day));
+  showMonth(false);
+  render();
+});
 
 els.nightToggle.addEventListener('change', () => {
   store.setSetting(state, 'theme', els.nightToggle.checked ? 'night' : 'paper');

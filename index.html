@@ -39,6 +39,16 @@
 
         <div class="rule"></div>
 
+        <div class="date-nav">
+          <button class="date-arrow" id="prev-day" type="button" aria-label="Предыдущий день">
+            <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 5.4 8 12l6.6 6.6"/></svg>
+          </button>
+          <button class="date-label" id="date-label" type="button">сегодня</button>
+          <button class="date-arrow" id="next-day" type="button" aria-label="Следующий день">
+            <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+          </button>
+        </div>
+
         <div class="day-line">
           <span id="today-label">сегодня</span>
           <span id="today-count">0 записей</span>
@@ -192,6 +202,32 @@
       <button class="ghost-btn danger" type="button" id="sheet-delete">Удалить</button>
       <button class="primary-btn" type="button" id="sheet-save">Сохранить</button>
     </div>
+  </section>
+
+  <div class="sheet-backdrop is-hidden" id="cal-backdrop"></div>
+  <section class="sheet is-hidden" id="calendar-sheet" aria-label="Календарь">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <h2 id="cal-title">ноябрь 2026</h2>
+      <button class="sheet-close" type="button" id="cal-close" aria-label="Закрыть">
+        <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="cal-nav">
+      <button class="date-arrow" id="cal-prev" type="button" aria-label="Предыдущий месяц">
+        <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 5.4 8 12l6.6 6.6"/></svg>
+      </button>
+      <button class="cal-today" id="cal-today" type="button">сегодня</button>
+      <button class="date-arrow" id="cal-next" type="button" aria-label="Следующий месяц">
+        <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>
+      </button>
+    </div>
+
+    <div class="cal-weekdays">
+      <span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>вс</span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
   </section>
 
   <div class="toast is-hidden" id="toast"></div>

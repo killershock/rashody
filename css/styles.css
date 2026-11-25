@@ -426,7 +426,96 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   text-transform: uppercase;
   color: var(--muted);
   padding: 2px 0 4px;
+  cursor: pointer;
 }
+
+/* ---------- выбор дня ---------- */
+
+.date-nav {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.date-arrow {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.12s ease;
+}
+
+.date-arrow:active { transform: scale(0.94); }
+.date-arrow:disabled { opacity: 0.25; }
+.date-arrow:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+
+.date-label {
+  font-family: var(--serif);
+  font-size: 17.5px;
+  color: var(--ink);
+  border-bottom: 1px dashed var(--line);
+  padding: 5px 2px;
+  text-align: center;
+}
+
+.date-label.is-today { color: var(--accent); }
+
+/* ---------- календарь ---------- */
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0 14px;
+}
+
+.cal-today {
+  font-size: 10.5px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 2px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 9.5px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.cal-day {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-family: var(--serif);
+  font-size: 15px;
+  border-radius: 50%;
+  color: var(--ink);
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.cal-day:disabled { color: var(--line); }
+.cal-day.is-today { border: 1px solid var(--accent); color: var(--accent); }
+.cal-day.is-selected { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.cal-empty { visibility: hidden; }
 
 .day-head b { font-family: var(--serif); font-size: 13px; letter-spacing: 0; color: var(--ink); }
 
