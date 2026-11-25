@@ -64,9 +64,13 @@ const els = {
   sheetSave: $('#sheet-save'),
   sheetDelete: $('#sheet-delete'),
   kinds: Array.from(document.querySelectorAll('.kind')),
+  flash: $('#flash'),
+  flashIco: $('#flash-ico'),
+  flashTitle: $('#flash-title'),
+  flashMeta: $('#flash-meta'),
+  flashSum: $('#flash-sum'),
   toast: $('#toast'),
 };
-
 const EXAMPLES = [
   'кофе двести пятьдесят',
   'такси триста сорок',
@@ -166,6 +170,20 @@ function toast(text, ms = 3200) {
   els.toast.classList.remove('is-hidden');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => els.toast.classList.add('is-hidden'), ms);
+}
+
+let flashTimer = null;
+
+function showFlash(entry) {
+  els.flashIco.innerHTML = icon(entry.categoryId || 'other', 18);
+  els.flashTitle.textContent = entry.note || entry.categoryName;
+  els.flashMeta.textContent = entry.categoryName;
+  els.flashSum.textContent = `${entry.kind === 'income' ? '+' : ''}${formatMoney(entry.amount)}`;
+  els.flash.classList.remove('is-on');
+  void els.flash.offsetWidth;
+  els.flash.classList.add('is-on');
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => els.flash.classList.remove('is-on'), 1700);
 }
 
 let voiceCache = null;
@@ -430,7 +448,7 @@ function commitParsed(parsed) {
   viewTs = startOfDay(Date.now());
   if (currentView !== 'day') showMonth(false);
   render();
-  toast(`${entry.note || entry.categoryName} · ${formatMoney(entry.amount)} → ${entry.categoryName}`);
+  showFlash(entry);
 }
 
 function handleQuery(query, raw) {
@@ -609,7 +627,7 @@ function saveSheet() {
   lastAddedId = entry.id;
   closeSheet();
   render();
-  toast(`Записал: ${entry.note || entry.categoryName} · ${formatMoney(entry.amount)}`);
+  showFlash(entry);
 }
 
 // ---------- голос ----------

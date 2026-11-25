@@ -1,5 +1,5 @@
 // sw.js — офлайн-режим. Оболочка приложения всегда берётся из кэша.
-const CACHE = 'rashody-v6';
+const CACHE = 'rashody-v7';
 const SHELL = [
   './',
   './index.html',
