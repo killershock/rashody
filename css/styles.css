@@ -71,6 +71,27 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
   margin: 0 auto;
   padding: 0 24px calc(128px + var(--safe-bottom));
   min-height: 100dvh;
+  animation: app-in 0.5s ease;
+}
+
+@keyframes app-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: none; }
+}
+
+.topbar { animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both; }
+.total { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
+.date-nav { animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both; }
+.mic { animation: mic-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s backwards; }
+
+@keyframes mic-pop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ---------- верх ---------- */
@@ -464,6 +485,60 @@ button { cursor: pointer; background: none; border: 0; padding: 0; }
 }
 
 .date-label.is-today { color: var(--accent); }
+
+.date-reset {
+  display: block;
+  margin: -10px auto 14px;
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 2px;
+}
+
+.cal-mode {
+  display: block;
+  margin: 0 0 12px;
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 2px;
+}
+
+.cal-mode.is-active { color: var(--muted); }
+
+.cal-day.is-picked {
+  background: rgba(180, 71, 46, 0.14);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.cal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+
+#cal-sum { font-family: var(--serif); font-size: 14px; color: var(--ink-soft); }
+
+.cal-apply {
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.cal-apply:disabled { opacity: 0.4; }
 
 /* ---------- календарь ---------- */
 

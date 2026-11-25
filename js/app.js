@@ -24,6 +24,11 @@ const els = {
   calNext: $('#cal-next'),
   calToday: $('#cal-today'),
   calGrid: $('#cal-grid'),
+  calMode: $('#cal-mode'),
+  calFoot: $('#cal-foot'),
+  calSum: $('#cal-sum'),
+  calApply: $('#cal-apply'),
+  resetSelection: $('#reset-selection'),
   views: { day: $('#view-day'), month: $('#view-month') },
   monthSpent: $('#month-spent'),
   monthIncome: $('#month-income'),
@@ -82,8 +87,11 @@ let toastTimer = null;
 let lastAddedId = null;
 let currentView = 'day';
 let viewTs = startOfDay(Date.now());
+let selection = null;
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
+let calMulti = false;
+let calPicked = new Set();
 let installEvent = null;
 
 // ---------- даты и суммы ----------
@@ -117,6 +125,14 @@ const todayEntries = () => {
 };
 const viewEntries = () => state.entries.filter((entry) => startOfDay(entry.ts) === viewTs);
 
+function activeEntries() {
+  if (selection && selection.length) {
+    const days = new Set(selection);
+    return state.entries.filter((entry) => days.has(startOfDay(entry.ts)));
+  }
+  return viewEntries();
+}
+
 const spentOf = (entries) => sumAmount(entries.filter((entry) => entry.kind !== 'income'));
 const incomeOf = (entries) => sumAmount(entries.filter((entry) => entry.kind === 'income'));
 
@@ -131,6 +147,7 @@ function dayLabel(ts) {
   return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
 }
 const timeOf = (ts) => new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const shortDate = (ts) => new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 
 const esc = (value) => String(value == null ? '' : value)
   .replace(/&/g, '&amp;')
@@ -269,14 +286,17 @@ function renderSummary() {
   }
 }
 
-function entryRow(entry) {
+function entryRow(entry, showDate = false) {
   const isIncome = entry.kind === 'income';
+  const meta = showDate
+    ? `${shortDate(entry.ts)} · ${entry.categoryName} · ${timeOf(entry.ts)}`
+    : `${entry.categoryName} · ${timeOf(entry.ts)}`;
   return `
     <li class="entry${entry.id === lastAddedId ? ' is-new' : ''}" data-id="${esc(entry.id)}">
       <div class="entry-ico" aria-hidden="true">${icon(entry.categoryId || 'other', 19)}</div>
       <div class="entry-main">
         <div class="entry-note">${esc(entry.note || entry.categoryName)}</div>
-        <div class="entry-meta">${esc(entry.categoryName)} · ${timeOf(entry.ts)}</div>
+        <div class="entry-meta">${esc(meta)}</div>
       </div>
       <div class="entry-amount${isIncome ? ' income' : ''}">${isIncome ? '+' : ''}${formatMoney(entry.amount)}</div>
       <button class="entry-del" type="button" data-del="${esc(entry.id)}" aria-label="Удалить">
@@ -286,11 +306,12 @@ function entryRow(entry) {
 }
 
 function renderToday() {
-  const entries = viewEntries();
+  const entries = activeEntries();
   const spent = spentOf(entries);
   const income = incomeOf(entries);
   const today = startOfDay(Date.now());
   const isToday = viewTs === today;
+  const isSelection = Boolean(selection && selection.length);
 
   const parts = [];
   if (spent) parts.push(`−${formatMoney(spent)}`);
@@ -302,20 +323,33 @@ function renderToday() {
     ? `${count} ${plural(count, 'запись', 'записи', 'записей')}`
     : 'пусто';
 
-  els.dateLabel.textContent = dayLabel(viewTs);
-  els.dateLabel.classList.toggle('is-today', isToday);
-  els.nextDay.disabled = viewTs >= today;
+  if (isSelection) {
+    els.dateLabel.textContent = `${selection.length} ${plural(selection.length, 'день', 'дня', 'дней')}`;
+    els.dateLabel.classList.remove('is-today');
+    els.prevDay.disabled = true;
+    els.nextDay.disabled = true;
+    els.resetSelection.classList.remove('is-hidden');
+  } else {
+    els.dateLabel.textContent = dayLabel(viewTs);
+    els.dateLabel.classList.toggle('is-today', isToday);
+    els.nextDay.disabled = viewTs >= today;
+    els.resetSelection.classList.add('is-hidden');
+  }
 
-  els.todayList.innerHTML = entries.map(entryRow).join('');
+  els.todayList.innerHTML = entries.map((entry) => entryRow(entry, isSelection)).join('');
   els.emptyState.classList.toggle('is-hidden', entries.length > 0);
 
   const emptyTitle = els.emptyState.querySelector('.empty-title');
   const emptyText = els.emptyState.querySelector('.empty-text');
-  if (emptyTitle) emptyTitle.textContent = isToday ? 'Скажи, сколько потратил' : 'В этот день пусто';
+  if (emptyTitle) {
+    emptyTitle.textContent = isSelection
+      ? 'За эти дни пусто'
+      : (isToday ? 'Скажи, сколько потратил' : 'В этот день пусто');
+  }
   if (emptyText) {
-    emptyText.textContent = isToday
-      ? 'Нажми микрофон и говори: «кофе двести пятьдесят». Или набери в строке.'
-      : 'Выбери другой день стрелками или загляни в календарь.';
+    if (isSelection) emptyText.textContent = 'Выбери другие дни в календаре или сбрось выбор.';
+    else if (isToday) emptyText.textContent = 'Нажми микрофон и говори: «кофе двести пятьдесят». Или набери в строке.';
+    else emptyText.textContent = 'Выбери другой день стрелками или загляни в календарь.';
   }
 
   if (!els.examples.dataset.ready) {
@@ -398,7 +432,7 @@ function renderMonth() {
       return `
         <section>
           <div class="day-head" data-day="${key}"><span>${esc(title)}, ${esc(weekday(key))}</span><b>${formatMoney(daySpent)}</b></div>
-          <ul class="entries">${list.map(entryRow).join('')}</ul>
+          <ul class="entries">${list.map((entry) => entryRow(entry)).join('')}</ul>
         </section>`;
     }).join('');
   }
@@ -446,6 +480,7 @@ function commitParsed(parsed) {
   store.addEntry(state, entry);
   lastAddedId = entry.id;
   viewTs = startOfDay(Date.now());
+  selection = null;
   if (currentView !== 'day') showMonth(false);
   render();
   showFlash(entry);
@@ -789,6 +824,8 @@ function openCalendar() {
   const current = new Date(viewTs);
   calYear = current.getFullYear();
   calMonth = current.getMonth();
+  calMulti = Boolean(selection && selection.length);
+  calPicked = new Set(selection && selection.length ? selection : [viewTs]);
   renderCalendar();
   els.calBackdrop.classList.remove('is-hidden');
   els.calendarSheet.classList.remove('is-hidden');
@@ -814,13 +851,33 @@ function renderCalendar() {
     const ts = new Date(calYear, calMonth, day).getTime();
     const classes = ['cal-day'];
     if (ts === today) classes.push('is-today');
-    if (ts === viewTs) classes.push('is-selected');
+    if (calMulti) {
+      if (calPicked.has(ts)) classes.push('is-picked');
+    } else if (ts === viewTs) {
+      classes.push('is-selected');
+    }
     const disabled = ts > today ? ' disabled' : '';
     cells.push(`<button class="${classes.join(' ')}" type="button" data-day="${ts}"${disabled}>${day}</button>`);
   }
   els.calGrid.innerHTML = cells.join('');
   els.calNext.disabled = calYear > now.getFullYear()
     || (calYear === now.getFullYear() && calMonth >= now.getMonth());
+
+  els.calMode.textContent = calMulti ? 'обычный выбор' : 'выбрать несколько дней';
+  els.calMode.classList.toggle('is-active', calMulti);
+  els.calFoot.classList.toggle('is-hidden', !calMulti);
+
+  if (calMulti) {
+    const picked = Array.from(calPicked);
+    const set = new Set(picked);
+    const spent = sumAmount(state.entries.filter(
+      (entry) => entry.kind !== 'income' && set.has(startOfDay(entry.ts)),
+    ));
+    els.calSum.textContent = picked.length
+      ? `${picked.length} ${plural(picked.length, 'день', 'дня', 'дней')} · −${formatMoney(spent)}`
+      : 'выбери дни';
+    els.calApply.disabled = picked.length === 0;
+  }
 }
 
 els.prevDay.addEventListener('click', () => shiftDay(-1));
@@ -841,14 +898,41 @@ els.calNext.addEventListener('click', () => {
 });
 els.calToday.addEventListener('click', () => {
   viewTs = startOfDay(Date.now());
+  selection = null;
   closeCalendar();
   if (currentView !== 'day') showMonth(false);
+  render();
+});
+els.calMode.addEventListener('click', () => {
+  calMulti = !calMulti;
+  if (calMulti) {
+    calPicked = new Set(selection && selection.length ? selection : [viewTs]);
+  }
+  renderCalendar();
+});
+els.calApply.addEventListener('click', () => {
+  if (!calPicked.size) return;
+  selection = Array.from(calPicked).sort((a, b) => a - b);
+  closeCalendar();
+  if (currentView !== 'day') showMonth(false);
+  render();
+});
+els.resetSelection.addEventListener('click', () => {
+  selection = null;
   render();
 });
 els.calGrid.addEventListener('click', (event) => {
   const button = event.target.closest('[data-day]');
   if (!button) return;
-  viewTs = startOfDay(Number(button.dataset.day));
+  const ts = startOfDay(Number(button.dataset.day));
+  if (calMulti) {
+    if (calPicked.has(ts)) calPicked.delete(ts);
+    else calPicked.add(ts);
+    renderCalendar();
+    return;
+  }
+  viewTs = ts;
+  selection = null;
   closeCalendar();
   if (currentView !== 'day') showMonth(false);
   render();
@@ -979,6 +1063,7 @@ bindListActions(els.monthDays);
 els.monthDays.addEventListener('click', (event) => {
   const head = event.target.closest('.day-head[data-day]');
   if (!head) return;
+  selection = null;
   viewTs = startOfDay(Number(head.dataset.day));
   showMonth(false);
   render();
